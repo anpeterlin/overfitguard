@@ -1,0 +1,50 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "overfitguard"
+version = "0.2.0"
+description = "An honest reality-check for trading strategies — Deflated Sharpe Ratio + sealed out-of-sample holdout."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "anpeterlin" }]
+keywords = ["quant", "trading", "backtest", "overfitting", "deflated sharpe", "reality check", "finance"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Financial and Insurance Industry",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Topic :: Office/Business :: Financial :: Investment",
+]
+dependencies = ["numpy>=1.21", "pandas>=1.3"]
+
+[project.optional-dependencies]
+test = ["pytest>=7"]
+
+[project.scripts]
+overfitguard = "overfitguard.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/anpeterlin/overfitguard"
+Issues = "https://github.com/anpeterlin/overfitguard/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/overfitguard"]
+
+# The published package is the library; the course/ is a repo asset, not part of
+# the pip artifact. Ship a focused sdist (source, tests, examples, license, readme).
+[tool.hatch.build.targets.sdist]
+include = [
+    "/src",
+    "/tests",
+    "/examples",
+    "/README.md",
+    "/LICENSE",
+    "/pyproject.toml",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"

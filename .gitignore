@@ -1,0 +1,19 @@
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.coverage
+htmlcov/
+*.html
+!examples/*.html
+!index.html
+.DS_Store
+
+# large generated lab search (regenerate via course/labs/make_data.py)
+course/labs/data/candidates.csv
