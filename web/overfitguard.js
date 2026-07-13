@@ -306,7 +306,11 @@
       if (Math.sqrt(n) * vmax >= vObs) ge++;
     }
     var pValue = (ge + 1) / (nBootstrap + 1);
-    var bestSharpe = stds[best] > 0 ? means[best] / stds[best] * Math.sqrt(ppy) : 0;
+    // Gate bestSharpe on the best column's actual range too (constant column -> Sharpe 0), mirroring
+    // screen.py's np.ptp guard, so float noise in stds[best] can't leak a spurious ~1e17 Sharpe.
+    var bmn = F[0][best], bmx = F[0][best];
+    for (i = 1; i < n; i++) { var bv = F[i][best]; if (bv < bmn) bmn = bv; if (bv > bmx) bmx = bv; }
+    var bestSharpe = (bmx > bmn && stds[best] > 0) ? means[best] / stds[best] * Math.sqrt(ppy) : 0;
     return {
       verdict: pValue < 0.05 ? "BEST_IS_SIGNIFICANT" : "NO_STRATEGY_BEATS_LUCK",
       bestName: names[best], realityCheckPValue: pValue, bestMeanAnnual: means[best] * ppy,

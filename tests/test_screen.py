@@ -36,6 +36,17 @@ def test_screen_p_value_bounds_and_metadata():
     assert r.n_candidates == 50 and r.n_periods == 2600
 
 
+def test_constant_best_column_reports_zero_sharpe_not_infinite():
+    # A flat (zero-range) winning column has no risk-adjusted return, but float noise in numpy's std
+    # would otherwise leak a spurious ~1e17 best_sharpe. Any constant best column -> Sharpe 0. The
+    # values below are ones that leak WITHOUT the range guard (0.001 alone would pass on a broken build).
+    for v in (0.001, -0.002, 0.0, 0.0007, 0.0035, -0.0078):
+        df = pd.DataFrame({"flat": np.full(200, v), "lower": np.full(200, v - 0.05)})
+        r = screen(df, n_bootstrap=100)
+        assert r.best_name == "flat"
+        assert r.best_sharpe_annual == 0.0
+
+
 def test_screen_insufficient_data():
     tiny = pd.DataFrame({"a": np.random.default_rng(0).normal(0, 0.01, 40)})
     assert screen(tiny).verdict == "INSUFFICIENT_DATA"

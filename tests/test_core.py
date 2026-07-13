@@ -96,7 +96,7 @@ def test_constant_series_is_zero_sharpe_not_infinite():
     # leave np.std at ~1e-19 instead of exactly 0, blowing the Sharpe up to ~1e17 and mislabelling a
     # flat line as a stellar strategy (LIKELY_REAL). Any constant series must read Sharpe 0 ->
     # FAILS_OUT_OF_SAMPLE, deterministically, whatever the constant's value or the series length.
-    for c in (0.001, 0.0007, -0.002, 0.0, 1234.5):
+    for c in (0.001, 0.0007, 0.0035, -0.002, -0.0078, 0.0, 1234.5):  # values that leak WITHOUT the guard
         for n in (199, 200, 250):
             r = np.full(n, c)
             assert annualized_sharpe(r) == 0.0
