@@ -80,6 +80,30 @@ def test_benchmark_comparison_populated():
     assert v.benchmark_sharpe is not None and v.beats_benchmark_oos in {True, False}
 
 
+def test_benchmark_shorter_is_not_silently_dropped():
+    # A benchmark shorter than the strategy can't be aligned to the sealed holdout; it must be skipped
+    # LOUDLY (a note), never silently ignored as if no benchmark were passed.
+    strat = _series(7, 0.0009, 0.008, n=2600)
+    short = _series(8, 0.0007, 0.010, n=2000)
+    v = validate(strat, n_trials=10, benchmark=short)
+    assert v.benchmark_sharpe is None and v.beats_benchmark_oos is None
+    assert any("Benchmark ignored" in n for n in v.notes)
+
+
+def test_benchmark_longer_is_aligned_not_miswindowed():
+    # A longer benchmark must be aligned to the strategy's first n periods (with a note), so the
+    # out-of-sample comparison uses the SAME window — not a misaligned tail of the longer series.
+    strat = _series(7, 0.0009, 0.008, n=2600)
+    long_b = _series(8, 0.0007, 0.010, n=3200)
+    v = validate(strat, n_trials=10, benchmark=long_b)
+    assert v.benchmark_sharpe is not None and v.beats_benchmark_oos in {True, False}
+    assert any("truncated" in n for n in v.notes)
+    # aligning to the first 2600 must match validating against an explicitly-truncated benchmark
+    import numpy as _np
+    truncated = _np.asarray(long_b)[:2600]
+    assert validate(strat, n_trials=10, benchmark=truncated).benchmark_sharpe == v.benchmark_sharpe
+
+
 def test_report_is_readable_and_mentions_verdict():
     v = validate(_series(9, 0.0009, 0.008), n_trials=10)
     text = v.report()
@@ -89,6 +113,20 @@ def test_report_is_readable_and_mentions_verdict():
 def test_annualized_sharpe_scales():
     r = _series(10, 0.0005, 0.010)
     assert abs(annualized_sharpe(r, 252) / annualized_sharpe(r, 63) - 2.0) < 1e-9  # sqrt(252/63)=2
+
+
+def test_constant_series_is_zero_sharpe_not_infinite():
+    # A flat (zero-variance) return series carries no risk-adjusted signal. Float rounding used to
+    # leave np.std at ~1e-19 instead of exactly 0, blowing the Sharpe up to ~1e17 and mislabelling a
+    # flat line as a stellar strategy (LIKELY_REAL). Any constant series must read Sharpe 0 ->
+    # FAILS_OUT_OF_SAMPLE, deterministically, whatever the constant's value or the series length.
+    for c in (0.001, 0.0007, 0.0035, -0.002, -0.0078, 0.0, 1234.5):  # values that leak WITHOUT the guard
+        for n in (199, 200, 250):
+            r = np.full(n, c)
+            assert annualized_sharpe(r) == 0.0
+            v = validate(r)
+            assert v.full_sharpe == 0.0 and v.in_sample_sharpe == 0.0 and v.out_of_sample_sharpe == 0.0
+            assert v.verdict == "FAILS_OUT_OF_SAMPLE"
 
 
 def test_extreme_trial_count_does_not_crash():

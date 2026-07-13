@@ -5,7 +5,26 @@ on:
     types: [published]
 
 jobs:
+  # Gate: never publish an untested build. The release is only shipped if the
+  # full test matrix passes on the tagged commit.
+  test:
+    name: pytest (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip && pip install -e ".[test]"
+      - run: pytest -q
+
   pypi-publish:
+    name: Build and publish
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -16,7 +35,10 @@ jobs:
           python-version: "3.12"
       - name: Build the package
         run: |
-          pip install build
+          python -m pip install --upgrade pip
+          pip install build twine
           python -m build
+      - name: Validate artifacts
+        run: twine check dist/*
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1

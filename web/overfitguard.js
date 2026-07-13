@@ -106,6 +106,13 @@
 
   function perPeriodSharpe(r) {
     if (r.length < 2) return 0;
+    // A constant (zero-variance) series carries no risk-adjusted signal. Guard on the range (max ===
+    // min) rather than the computed std: float rounding leaves the std of an effectively-constant
+    // series at a tiny non-zero value, which would blow mean/std up to a spurious ~1e17 "infinite
+    // Sharpe". Matches the Python library's np.ptp(r) == 0 guard, so a flat line -> Sharpe 0 in both.
+    var lo = r[0], hi = r[0];
+    for (var i = 1; i < r.length; i++) { if (r[i] < lo) lo = r[i]; else if (r[i] > hi) hi = r[i]; }
+    if (hi === lo) return 0;
     var sd = stdDdof1(r);
     return sd > 0 ? mean(r) / sd : 0;
   }
@@ -192,7 +199,16 @@
     var benchSr = null, beatsOos = null;
     if (benchmark != null) {
       var b = clean(benchmark);
-      if (b.length >= r.length) {
+      // Never silently drop a benchmark: align it to the strategy period-for-period (mirrors core.py).
+      if (b.length < r.length) {
+        notes.push("Benchmark ignored: it has " + b.length + " periods but the strategy has " + r.length +
+          " — pass a benchmark aligned to (and at least as long as) the returns.");
+      } else {
+        if (b.length > r.length) {
+          notes.push("Benchmark truncated to the strategy's first " + r.length + " periods (it had " +
+            b.length + ") — ensure it is aligned to the returns.");
+        }
+        b = b.slice(0, r.length);
         benchSr = annualizedSharpe(b, ppy);
         beatsOos = annualizedSharpe(b.slice(split), ppy) < oosSr;
       }
@@ -299,7 +315,11 @@
       if (Math.sqrt(n) * vmax >= vObs) ge++;
     }
     var pValue = (ge + 1) / (nBootstrap + 1);
-    var bestSharpe = stds[best] > 0 ? means[best] / stds[best] * Math.sqrt(ppy) : 0;
+    // Gate bestSharpe on the best column's actual range too (constant column -> Sharpe 0), mirroring
+    // screen.py's np.ptp guard, so float noise in stds[best] can't leak a spurious ~1e17 Sharpe.
+    var bmn = F[0][best], bmx = F[0][best];
+    for (i = 1; i < n; i++) { var bv = F[i][best]; if (bv < bmn) bmn = bv; if (bv > bmx) bmx = bv; }
+    var bestSharpe = (bmx > bmn && stds[best] > 0) ? means[best] / stds[best] * Math.sqrt(ppy) : 0;
     return {
       verdict: pValue < 0.05 ? "BEST_IS_SIGNIFICANT" : "NO_STRATEGY_BEATS_LUCK",
       bestName: names[best], realityCheckPValue: pValue, bestMeanAnnual: means[best] * ppy,

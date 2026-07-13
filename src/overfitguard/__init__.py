@@ -40,4 +40,4 @@ __all__ = [
     "deflated_sharpe_ratio",
     "probabilistic_sharpe_ratio",
 ]
-__version__ = "0.2.0"
+__version__ = "0.2.1"

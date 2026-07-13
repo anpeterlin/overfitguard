@@ -50,7 +50,8 @@ overfitguard screen candidates.csv --bootstrap 2000 --html screen.html
 `--html` writes a self-contained, theme-aware report you can open in any browser or hand to a client.
 See two real outputs without installing anything: a **[caught mirage](examples/mirage_report.html)**
 (`FAILS_OUT_OF_SAMPLE`) and a **[genuine edge](examples/sample_report.html)** (`LIKELY_REAL`) — proof
-the verdict swings both ways. Regenerate either with the command above on the matching `*_returns.csv`.
+the verdict swings both ways. Regenerate them with `--trials 500` (mirage) and `--trials 300` (genuine
+edge) on the matching `*_returns.csv`.
 
 ## The verdicts
 
@@ -82,7 +83,8 @@ the one real edge, and — the capstone — **audit your own strategy in one com
 
 ## Limitations & how to read the verdict
 
-OverfitGuard is deliberately a **skeptic**. Understand these before you use it:
+OverfitGuard is deliberately a **skeptic**. Understand these before you use it (the full treatment,
+with formulas and calibration evidence, is in **[docs/METHODS.md](docs/METHODS.md)**):
 
 - **`INCONCLUSIVE` is common, and it does *not* mean "fake."** The engine is tuned for a low
   false-positive rate (≈5% at the 95% bar, confirmed by Monte-Carlo calibration), which costs it
@@ -108,9 +110,10 @@ overfitguard/
   pyproject.toml            # pip-installable, exposes the `overfitguard` CLI
   index.html                # self-contained landing page (GitHub Pages front door)
   src/overfitguard/         # core.py · screen.py · report.py · cli.py
-  tests/                    # 23 tests (core, screener, CLI)
+  tests/                    # 27 tests (core, screener, CLI)
   examples/                 # quickstart.py + two sample HTML reports (a catch and a pass)
   course/                   # "Fooled by Backtests" — 5 chapters + hands-on labs + capstone
+  docs/METHODS.md           # the maths, calibration evidence, and limitations in full
   .github/workflows/ci.yml  # tests on 3.9 / 3.11 / 3.12
 ```
 

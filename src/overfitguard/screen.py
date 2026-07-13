@@ -104,7 +104,10 @@ def screen(
             ge += 1
     p_value = (ge + 1) / (n_bootstrap + 1)      # +1: never report an impossible p=0
 
-    best_sharpe = float(means[best] / stds[best] * math.sqrt(periods_per_year)) if stds[best] > 0 else 0.0
+    # A constant (zero-range) best column has no risk-adjusted return; numpy leaves float noise in the
+    # std, so gate on the actual range too -- otherwise a flat candidate leaks a spurious ~1e17 Sharpe.
+    best_sharpe = (float(means[best] / stds[best] * math.sqrt(periods_per_year))
+                   if stds[best] > 0 and float(np.ptp(F[:, best])) > 0.0 else 0.0)
     verdict = "BEST_IS_SIGNIFICANT" if p_value < 0.05 else "NO_STRATEGY_BEATS_LUCK"
     return ScreenResult(verdict, best_name, float(p_value), float(means[best] * periods_per_year),
                         best_sharpe, int(k), int(n), int(n_bootstrap), int(block))
