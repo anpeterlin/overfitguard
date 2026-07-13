@@ -106,6 +106,13 @@
 
   function perPeriodSharpe(r) {
     if (r.length < 2) return 0;
+    // A constant (zero-variance) series carries no risk-adjusted signal. Guard on the range (max ===
+    // min) rather than the computed std: float rounding leaves the std of an effectively-constant
+    // series at a tiny non-zero value, which would blow mean/std up to a spurious ~1e17 "infinite
+    // Sharpe". Matches the Python library's np.ptp(r) == 0 guard, so a flat line -> Sharpe 0 in both.
+    var lo = r[0], hi = r[0];
+    for (var i = 1; i < r.length; i++) { if (r[i] < lo) lo = r[i]; else if (r[i] > hi) hi = r[i]; }
+    if (hi === lo) return 0;
     var sd = stdDdof1(r);
     return sd > 0 ? mean(r) / sd : 0;
   }

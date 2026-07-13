@@ -91,6 +91,20 @@ def test_annualized_sharpe_scales():
     assert abs(annualized_sharpe(r, 252) / annualized_sharpe(r, 63) - 2.0) < 1e-9  # sqrt(252/63)=2
 
 
+def test_constant_series_is_zero_sharpe_not_infinite():
+    # A flat (zero-variance) return series carries no risk-adjusted signal. Float rounding used to
+    # leave np.std at ~1e-19 instead of exactly 0, blowing the Sharpe up to ~1e17 and mislabelling a
+    # flat line as a stellar strategy (LIKELY_REAL). Any constant series must read Sharpe 0 ->
+    # FAILS_OUT_OF_SAMPLE, deterministically, whatever the constant's value or the series length.
+    for c in (0.001, 0.0007, -0.002, 0.0, 1234.5):
+        for n in (199, 200, 250):
+            r = np.full(n, c)
+            assert annualized_sharpe(r) == 0.0
+            v = validate(r)
+            assert v.full_sharpe == 0.0 and v.in_sample_sharpe == 0.0 and v.out_of_sample_sharpe == 0.0
+            assert v.verdict == "FAILS_OUT_OF_SAMPLE"
+
+
 def test_extreme_trial_count_does_not_crash():
     # A pathologically large trial count must NOT raise (the inv_cdf(1.0) guard) and must read as
     # explained-by-luck, with a valid probability. (Regression for the forensic-audit crash.)
