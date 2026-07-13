@@ -6,7 +6,7 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
-## [0.2.1] — unreleased
+## [0.2.1] — 2026-07-13
 
 ### Fixed
 - **Zero-variance (constant) return series no longer report a spurious ~1e17 "infinite Sharpe."**
