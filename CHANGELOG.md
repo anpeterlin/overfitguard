@@ -1,0 +1,42 @@
+# Changelog
+
+All notable changes to this project are documented here. The format is based on
+[Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to
+[Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [0.2.1] — unreleased
+
+### Fixed
+- **Zero-variance (constant) return series no longer report a spurious ~1e17 "infinite Sharpe."**
+  A flat line could previously read `LIKELY_REAL` in `validate()` or report a `~1e17` best Sharpe in
+  `screen()`, because floating-point rounding left the standard deviation just above zero. Sharpe is
+  now gated on the actual range (`max == min` / `np.ptp == 0`) in both the Python library
+  (`core.py`, `screen.py`) and the browser engine (`web/overfitguard.js`); a constant series returns
+  Sharpe `0` deterministically.
+- **`validate()` no longer silently drops a mismatched-length benchmark.** A benchmark shorter than
+  the strategy is skipped with an explicit note (it cannot be aligned to the sealed holdout); a longer
+  one is aligned to the strategy's first *n* periods (also noted), instead of comparing a misaligned
+  window.
+- Corrected the web app: the engine file (`overfitguard.js`) had been misnamed, leaving the
+  "Run audit" button silently non-functional.
+
+### Added
+- Continuous integration: `pytest` on Python 3.9 / 3.11 / 3.12 plus a standalone JavaScript
+  degenerate-input regression sweep, on every push and pull request.
+- The PyPI publish workflow is now gated on the full test matrix and validates artifacts
+  (`twine check`) before upload.
+- Regression coverage for the constant-series and benchmark-alignment fixes, and a self-contained
+  JS gate at `web/_parity/check_degenerate.js`.
+- "Open the web app" calls-to-action on the landing page.
+- Repository hygiene: `CONTRIBUTING.md`, `SECURITY.md`, this changelog, and issue/PR templates.
+
+## [0.2.0]
+
+### Added
+- Initial public release: Deflated Sharpe Ratio (Bailey & López de Prado) and Probabilistic Sharpe
+  Ratio, a sealed out-of-sample holdout, and White's Reality Check for multi-candidate searches.
+- `overfitguard` CLI (`validate` / `screen`) with self-contained HTML reports.
+- A browser engine (a faithful JavaScript port of the core) and web app.
+- The "Fooled by Backtests" companion course with hands-on labs.

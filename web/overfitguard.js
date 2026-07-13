@@ -199,7 +199,16 @@
     var benchSr = null, beatsOos = null;
     if (benchmark != null) {
       var b = clean(benchmark);
-      if (b.length >= r.length) {
+      // Never silently drop a benchmark: align it to the strategy period-for-period (mirrors core.py).
+      if (b.length < r.length) {
+        notes.push("Benchmark ignored: it has " + b.length + " periods but the strategy has " + r.length +
+          " — pass a benchmark aligned to (and at least as long as) the returns.");
+      } else {
+        if (b.length > r.length) {
+          notes.push("Benchmark truncated to the strategy's first " + r.length + " periods (it had " +
+            b.length + ") — ensure it is aligned to the returns.");
+        }
+        b = b.slice(0, r.length);
         benchSr = annualizedSharpe(b, ppy);
         beatsOos = annualizedSharpe(b.slice(split), ppy) < oosSr;
       }

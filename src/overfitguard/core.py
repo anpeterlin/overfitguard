@@ -200,7 +200,18 @@ def validate(
     beats_oos: bool | None = None
     if benchmark is not None:
         b = _clean(benchmark)
-        if b.size >= r.size:
+        # The benchmark must be aligned to the strategy period-for-period. Never silently drop it:
+        # if it is too short we cannot align the sealed-holdout window, so we say so; if it is longer
+        # we align to the strategy's first n periods (and note the truncation) rather than compare a
+        # mismatched window. A same-length benchmark is used as-is (the common case).
+        if b.size < r.size:
+            notes.append(f"Benchmark ignored: it has {b.size} periods but the strategy has {r.size} — "
+                         "pass a benchmark aligned to (and at least as long as) the returns.")
+        else:
+            if b.size > r.size:
+                notes.append(f"Benchmark truncated to the strategy's first {r.size} periods "
+                             f"(it had {b.size}) — ensure it is aligned to the returns.")
+            b = b[:r.size]
             bench_sr = annualized_sharpe(b, periods_per_year)
             beats_oos = bool(annualized_sharpe(b[split:], periods_per_year) < oos_sr)
 
