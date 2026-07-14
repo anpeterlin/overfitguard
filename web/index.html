@@ -89,6 +89,13 @@ input[type=number]:focus, select:focus{outline:2px solid var(--accent); outline-
 .notes{margin:18px 0 0; padding:0; list-style:none}
 .notes li{font-size:13.5px; color:var(--muted); line-height:1.5; padding-left:16px; position:relative; margin-bottom:6px}
 .notes li::before{content:"—"; position:absolute; left:0; color:var(--faint)}
+.kfold:not(:empty){margin-top:20px; border-top:1px solid var(--line); padding-top:16px}
+.kfold .kf-h{font-family:var(--mono); font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--faint); margin-bottom:10px}
+.kfold .folds{display:flex; flex-wrap:wrap; gap:6px}
+.kfold .fold{font-family:var(--mono); font-variant-numeric:tabular-nums; font-size:13px; font-weight:700; padding:4px 9px; border-radius:6px; color:#fff}
+.kfold .fold.pos{background:var(--real)} .kfold .fold.neg{background:var(--mirage)}
+.kfold .kf-sum{font-family:var(--mono); font-size:12px; color:var(--muted); margin:10px 0 4px}
+.kfold .kf-verdict{font-size:14px; font-weight:600; margin:0}
 .result-actions{margin-top:20px; display:flex; gap:10px; flex-wrap:wrap}
 
 /* pro teaser */
@@ -195,6 +202,7 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
         <p class="blurb" id="blurb"></p>
         <ul class="metrics" id="metrics"></ul>
         <ul class="notes" id="notes"></ul>
+        <div id="kfold" class="kfold"></div>
         <div class="result-actions">
           <button class="btn btn-ghost" id="download">Download report</button>
         </div>
@@ -318,10 +326,23 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
   }
 
   function fmt(x, d){ return (x==null || !isFinite(x)) ? '—' : Number(x).toFixed(d==null?2:d); }
-  var lastResult = null;
+  var lastResult = null, lastKfold = null;
 
-  function render(res){
+  function kfoldHtml(kf){
+    if(!kf || !kf.foldSharpes || !kf.foldSharpes.length) return '';
+    var chips = kf.foldSharpes.map(function(s){ return '<span class="fold '+(s>0?'pos':'neg')+'">'+fmt(s)+'</span>'; }).join('');
+    var msg = kf.consistent ? 'CONSISTENT — the edge is positive in every sub-period.'
+                            : 'NOT consistent — the edge is absent or negative in at least one sub-period.';
+    return '<div class="kf-h">K-fold out-of-sample cross-validation ('+kf.k+' folds)</div>'
+      + '<div class="folds">'+chips+'</div>'
+      + '<p class="kf-sum">mean '+fmt(kf.meanSharpe)+' · min '+fmt(kf.minSharpe)+' · positive in '
+      + Math.round(kf.fracFoldsPositive*100)+'% of folds</p>'
+      + '<p class="kf-verdict" style="color:'+(kf.consistent?'var(--real)':'var(--mirage)')+'">'+msg+'</p>';
+  }
+
+  function render(res, kf){
     lastResult = res;
+    lastKfold = kf || null;
     var v = VERDICTS[res.verdict] || { color:'var(--faint)', label:res.verdict, blurb:'' };
     var vd = $('verdict'); vd.textContent = v.label; vd.style.background = v.color;
     $('blurb').textContent = v.blurb;
@@ -338,6 +359,7 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
       return '<li><span class="k">'+row[0]+'</span><span class="v '+row[2]+'">'+row[1]+'</span></li>';
     }).join('');
     $('notes').innerHTML = (res.notes||[]).map(function(n){ return '<li>'+n.replace(/</g,'&lt;')+'</li>'; }).join('');
+    $('kfold').innerHTML = kfoldHtml(lastKfold);
     $('result').style.display = 'block';
     saveHistory(res);
     $('result').scrollIntoView({ behavior:'smooth', block:'nearest' });
@@ -350,7 +372,8 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
     var trials = Math.max(1, Math.floor(Number($('trials').value) || 1));
     var ppy = Number($('freq').value) || 252;
     var res = OverfitGuard.validate(returns, { nTrials: trials, periodsPerYear: ppy });
-    render(res);
+    var kf = OverfitGuard.kfoldOosSharpe(returns, 5, { periodsPerYear: ppy });
+    render(res, kf);
   }
   function showErr(msg){ var e = $('err'); e.textContent = msg; e.style.display = 'block'; }
 
@@ -366,7 +389,7 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
   }
 
   // ---- downloadable self-contained report ----
-  function reportHtml(res){
+  function reportHtml(res, kf){
     var v = VERDICTS[res.verdict] || { color:'#8b949e', label:res.verdict, blurb:'' };
     var color = res.verdict==='LIKELY_REAL' ? '#1a7f37' : (res.verdict==='FAILS_OUT_OF_SAMPLE'||res.verdict==='LIKELY_OVERFIT') ? '#cf222e' : res.verdict==='INSUFFICIENT_DATA' ? '#8b949e' : '#b3771a';
     function row(k,val){ return '<tr><td>'+k+'</td><td class="n">'+val+'</td></tr>'; }
@@ -389,12 +412,17 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
       row('In-sample Sharpe', fmt(res.inSampleSharpe))+
       row('Out-of-sample Sharpe', fmt(res.outOfSampleSharpe))+
       row('Out-of-sample retention', res.nPeriods<60?'—':fmt(res.oosRetention*100,0)+'%')+
-      "</table><p class='foot'>"+res.nPeriods+" periods · "+Math.round(res.holdoutFrac*100)+"% sealed as holdout · "+
+      "</table>"+(function(){
+        if(!kf || !kf.foldSharpes || !kf.foldSharpes.length) return '';
+        var chips = kf.foldSharpes.map(function(s){ return "<span style='display:inline-block;padding:3px 8px;border-radius:6px;color:#fff;font-weight:600;margin:2px;font-variant-numeric:tabular-nums;background:"+(s>0?'#1a7f37':'#cf222e')+"'>"+fmt(s)+"</span>"; }).join('');
+        return "<h2 style='font-size:14px;color:#57606a;margin:22px 0 8px'>K-fold out-of-sample cross-validation ("+kf.k+" folds)</h2>"+chips+
+          "<p style='color:#57606a;font-size:13px;margin:10px 0 0'>mean "+fmt(kf.meanSharpe)+" · min "+fmt(kf.minSharpe)+" · positive in "+Math.round(kf.fracFoldsPositive*100)+"% of folds — "+(kf.consistent?'CONSISTENT':'NOT consistent')+"</p>";
+      })()+"<p class='foot'>"+res.nPeriods+" periods · "+Math.round(res.holdoutFrac*100)+"% sealed as holdout · "+
       "Deflated Sharpe (Bailey &amp; López de Prado) + sealed out-of-sample holdout · generated locally by OverfitGuard.</p></div></div></body></html>";
   }
   function download(){
     if(!lastResult) return;
-    var blob = new Blob([reportHtml(lastResult)], { type:'text/html' });
+    var blob = new Blob([reportHtml(lastResult, lastKfold)], { type:'text/html' });
     var url = URL.createObjectURL(blob), a = document.createElement('a');
     a.href = url; a.download = 'overfitguard-report.html'; document.body.appendChild(a); a.click();
     document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(url); }, 1000);

@@ -4,7 +4,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from overfitguard import html_report, screen, validate
+from overfitguard import html_report, kfold_oos_sharpe, screen, validate
 
 
 def _noise_search(seed: int, k: int = 300, n: int = 2600) -> pd.DataFrame:
@@ -60,3 +60,13 @@ def test_html_report_is_self_contained_for_both_result_types():
         assert page.startswith("<!doctype html>")
         assert result.verdict in page
         assert "http://" not in page and "https://" not in page  # no external resources -> self-contained
+
+
+def test_html_report_embeds_kfold_block_and_stays_self_contained():
+    r = pd.Series(np.random.default_rng(0).normal(0.001, 0.008, 2600))
+    v = validate(r, n_trials=10)
+    page = html_report(v, kfold=kfold_oos_sharpe(r, k=5))
+    assert page.startswith("<!doctype html>")
+    assert "cross-validation" in page and "consistent" in page.lower()  # CONSISTENT / NOT consistent
+    assert "http://" not in page and "https://" not in page     # still self-contained
+    assert "cross-validation" not in html_report(v)             # absent when no kfold passed

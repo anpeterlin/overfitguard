@@ -42,9 +42,16 @@ table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 td,th{text-align:left;padding:9px 4px;border-bottom:1px solid #eaeef2;font-size:14px}
 th{color:#57606a;font-weight:600}td.n{text-align:right;font-weight:600}
 .foot{margin-top:22px;color:#8b949e;font-size:12px}
+.kfold{margin-top:22px;border-top:1px solid #eaeef2;padding-top:16px}
+.kfold h2{font-size:14px;color:#57606a;font-weight:600;margin:0 0 10px}
+.folds{display:flex;flex-wrap:wrap;gap:6px}
+.fold{font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;padding:4px 9px;border-radius:6px;color:#fff}
+.fold.pos{background:#1a7f37}.fold.neg{background:#cf222e}
+.kf-sum{color:#57606a;font-size:13px;margin:10px 0 4px}
+.kf-verdict{font-size:14px;font-weight:600;margin:0}
 @media(prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}
- .card{background:#161b22;border-color:#30363d}.sub,th,.foot{color:#8b949e}
- td,th{border-color:#21262d}}
+ .card{background:#161b22;border-color:#30363d}.sub,th,.foot,.kfold h2,.kf-sum{color:#8b949e}
+ td,th,.kfold{border-color:#21262d}}
 """
 
 
@@ -53,7 +60,7 @@ def _row(label: str, value: str, n: bool = True) -> str:
     return f"<tr><td>{html.escape(label)}</td><td{cls}>{html.escape(value)}</td></tr>"
 
 
-def _page(title: str, verdict: str, rows: str, foot: str) -> str:
+def _page(title: str, verdict: str, rows: str, foot: str, extra: str = "") -> str:
     color = _VERDICT_COLOR.get(verdict, "#57606a")
     plain = _VERDICT_PLAIN.get(verdict, "")
     return (
@@ -63,7 +70,27 @@ def _page(title: str, verdict: str, rows: str, foot: str) -> str:
         f"<div class='card'><h1>OverfitGuard</h1><p class='sub'>{html.escape(title)}</p>"
         f"<span class='verdict' style='background:{color}'>{html.escape(verdict)}</span>"
         f"<p class='plain'>{html.escape(plain)}</p>"
-        f"<table>{rows}</table><p class='foot'>{html.escape(foot)}</p></div></div></body></html>"
+        f"<table>{rows}</table>{extra}<p class='foot'>{html.escape(foot)}</p></div></div></body></html>"
+    )
+
+
+def _kfold_block(kf: Any) -> str:
+    """HTML for a KFoldResult (per-fold Sharpe chips + consistency verdict). Empty string if absent."""
+    if kf is None or not getattr(kf, "fold_sharpes", None):
+        return ""
+    chips = "".join(
+        f'<span class="fold {"pos" if s > 0 else "neg"}">{s:.2f}</span>' for s in kf.fold_sharpes
+    )
+    consistent = kf.consistent
+    verdict = ("CONSISTENT — the edge is positive in every sub-period." if consistent
+               else "NOT consistent — the edge is absent or negative in at least one sub-period.")
+    color = "#1a7f37" if consistent else "#cf222e"
+    return (
+        f"<div class='kfold'><h2>K-fold out-of-sample cross-validation ({kf.k} folds)</h2>"
+        f"<div class='folds'>{chips}</div>"
+        f"<p class='kf-sum'>mean {kf.mean_sharpe:.2f} · min {kf.min_sharpe:.2f} · "
+        f"positive in {kf.frac_folds_positive * 100:.0f}% of folds</p>"
+        f"<p class='kf-verdict' style='color:{color}'>{html.escape(verdict)}</p></div>"
     )
 
 
@@ -71,8 +98,12 @@ def _pct(x: float) -> str:
     return f"{x * 100:.1f}%"
 
 
-def html_report(result: Any) -> str:
-    """Render a ValidationResult or ScreenResult as a self-contained HTML page (a string you can save)."""
+def html_report(result: Any, kfold: Any = None) -> str:
+    """Render a ValidationResult or ScreenResult as a self-contained HTML page (a string you can save).
+
+    Pass an optional ``kfold`` (a ``KFoldResult``) alongside a ValidationResult to append a K-fold
+    out-of-sample cross-validation section. Ignored for a ScreenResult.
+    """
     v = result.verdict
     if hasattr(result, "deflated_sharpe"):  # ValidationResult
         rows = "".join([
@@ -87,7 +118,7 @@ def html_report(result: Any) -> str:
              if result.benchmark_sharpe is not None else []))
         foot = (f"{result.n_periods:,} periods · {int(result.holdout_frac * 100)}% sealed as holdout · "
                 "Deflated Sharpe (Bailey & López de Prado) + sealed out-of-sample holdout.")
-        return _page("Single-strategy reality check", v, rows, foot)
+        return _page("Single-strategy reality check", v, rows, foot, extra=_kfold_block(kfold))
 
     # ScreenResult
     rows = "".join([
