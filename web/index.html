@@ -224,18 +224,28 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
         <p class="sub">The free audit above is fully functional and always will be. Pro adds the tools you'd pay for — and still runs entirely in your browser.</p>
         <div class="actions">
           <a class="btn btn-primary" id="buyPro" href="#" target="_blank" rel="noopener">Get Pro</a>
-          <button class="linklike" id="haveKey">I have a license key</button>
+          <button class="linklike" id="haveAccount">Sign in</button>
+          <button class="linklike" id="signOutFree" style="display:none">Sign out</button>
         </div>
-        <div class="keybox" id="keyBox" style="display:none">
-          <input id="licenseKey" type="text" placeholder="Paste your license key" autocomplete="off" spellcheck="false">
-          <button class="btn btn-ghost" id="activate">Activate</button>
+        <div id="signinBox" style="display:none">
+          <div class="keybox">
+            <input id="email" type="email" placeholder="you@fund.com" autocomplete="email" spellcheck="false">
+            <button class="btn btn-ghost" id="sendLink">Email me a sign-in link</button>
+          </div>
+          <div class="keybox" id="codeBox" style="display:none">
+            <input id="otpCode" type="text" inputmode="numeric" autocomplete="one-time-code" placeholder="6-digit code from the email" spellcheck="false">
+            <button class="btn btn-ghost" id="verifyCode">Verify code</button>
+          </div>
         </div>
+        <p class="sub" id="acctRow" style="display:none"></p>
+        <p class="sub" id="proNote" style="display:none"></p>
         <div class="err" id="proErr"></div>
       </div>
       <!-- unlocked: screener -->
       <div id="proUnlocked" style="display:none">
         <div class="pro-head"><b>Search screener</b> — White's Reality Check across every candidate you tried
-          <button class="linklike" id="deactivate" title="Sign out of Pro on this device">deactivate</button></div>
+          <span id="proEmail" class="mono" style="color:var(--faint); font-size:12px"></span>
+          <button class="linklike" id="deactivate" title="Sign out of this account">sign out</button></div>
         <label for="screenData">Paste a CSV — each column is one candidate's returns (a date column is fine)</label>
         <textarea id="screenData" spellcheck="false" placeholder="date,cfg_1,cfg_2,cfg_3
 2020-01-02,0.0011,-0.0021,0.0004
@@ -274,6 +284,8 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
   </div>
 </footer>
 
+<script src="config.js"></script>
+<script src="auth.js"></script>
 <script src="overfitguard.js"></script>
 <script>
 (function(){
@@ -443,14 +455,16 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
     reader.readAsText(f);
   });
 
-  /* =====================  PRO  ===================== */
-  // Payment + licensing (owner sets these up on Lemon Squeezy; see web/PRO_SETUP.md):
-  var PRO_CHECKOUT_URL = "https://overfitguard.lemonsqueezy.com/checkout";   // <- replace with your LS checkout link
-  // Pro gating is client-side (this whole app is): fine for a mainstream audience, since the
-  // free Python library is available to anyone technical enough to bypass a browser paywall.
+  /* =====================  PRO  (accounts + server-verified entitlement)  ===================== */
+  // The audit runs in your browser, but Pro is NOT a client-side flag: you sign in with Supabase
+  // (email link or 6-digit code) and the server (/api/entitlement) is the sole authority on whether
+  // Pro is active. A devtools/localStorage edit can no longer fake it. Config lives in config.js;
+  // the client logic lives in auth.js (OGAuth). See web/AUTH_SETUP.md.
+  var ENT = { pro:false, plan:'free', status:null, email:null };
+  function isPro(){ return !!ENT.pro; }
 
-  function isPro(){ try{ return localStorage.getItem('og-pro') === 'active'; }catch(e){ return false; } }
-  function setPro(on){ try{ on ? localStorage.setItem('og-pro','active') : localStorage.removeItem('og-pro'); }catch(e){} paintPro(); }
+  function showProNote(msg){ var n=$('proNote'); n.textContent=msg||''; n.style.display = msg?'block':'none'; }
+  function showProErr(msg){ var e=$('proErr'); e.textContent=msg||''; e.style.display = msg?'block':'none'; }
 
   function paintPro(){
     var pro = isPro();
@@ -460,38 +474,101 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
     var badge = $('proBadge');
     badge.textContent = pro ? '✓ Active' : '🔒 Locked';
     badge.className = 'pro-badge ' + (pro ? 'active' : 'locked');
-    if(pro) renderHistory();
+    var email = (window.OGAuth && OGAuth.currentEmail && OGAuth.currentEmail()) || ENT.email;
+    if(pro){ $('proEmail').textContent = email ? ('· ' + email) : ''; renderHistory(); }
+    paintAccountRow(email);
   }
 
-  // Validate a license key against Lemon Squeezy's public endpoint.
-  function validateLicense(key){
-    return fetch('https://api.lemonsqueezy.com/v1/licenses/validate', {
-      method:'POST', headers:{ 'Accept':'application/json', 'Content-Type':'application/json' },
-      body: JSON.stringify({ license_key: key })
-    }).then(function(r){ return r.json(); }).then(function(d){ return !!(d && d.valid === true); })
-      .catch(function(){ return false; });
+  // The locked panel's account line: signed-out → "Sign in" button; signed-in-but-free → who + sign out.
+  function paintAccountRow(email){
+    if(isPro()){ $('acctRow').style.display='none'; return; }
+    var signedIn = !!(window.OGAuth && OGAuth.configured() && OGAuth.getSession());
+    if(signedIn){
+      $('acctRow').style.display='block';
+      $('acctRow').textContent = 'Signed in as ' + (email || 'your account') + ' · free plan.';
+      $('signOutFree').style.display=''; $('haveAccount').style.display='none';
+    } else {
+      $('acctRow').style.display='none';
+      $('signOutFree').style.display='none';
+      if(window.OGAuth && OGAuth.configured()) $('haveAccount').style.display='';
+    }
   }
 
-  $('buyPro').setAttribute('href', PRO_CHECKOUT_URL);
-  $('haveKey').addEventListener('click', function(){
-    var box = $('keyBox'); box.style.display = box.style.display==='none' ? 'flex' : 'none';
+  function refreshEntitlement(){
+    if(!window.OGAuth || !OGAuth.configured() || !OGAuth.getSession()){
+      ENT = { pro:false, plan:'free', status:null, email:null }; paintPro(); return Promise.resolve();
+    }
+    return OGAuth.getEntitlement().then(function(g){ ENT = g; paintPro(); })
+      .catch(function(){ ENT = { pro:false, plan:'free', status:null, email:null }; paintPro(); });
+  }
+
+  function bootstrapPro(){
+    var checkout = (window.OG_CONFIG && OG_CONFIG.PRO_CHECKOUT_URL) || '';
+    $('buyPro').setAttribute('href', checkout || '#');
+
+    // Owner dev preview: ?preview unlocks Pro for THIS TAB only (in-memory, never persisted, never a
+    // customer path) — to demo Pro before Supabase/Lemon Squeezy are wired. Real Pro is server-verified.
+    if(/[?&]preview\b/.test(location.search)){
+      ENT = { pro:true, plan:'preview', status:'active', email:null };
+      console.warn('OverfitGuard: Pro DEV PREVIEW enabled via ?preview (this tab only)');
+      paintPro(); return;
+    }
+
+    if(!window.OGAuth || !OGAuth.configured()){
+      showProNote('Accounts are launching soon — the free audit above is fully functional today.');
+      $('haveAccount').style.display='none';
+      paintPro(); return;
+    }
+
+    // If we just returned from a magic-link email, capture the session from the URL, then verify.
+    try{ OGAuth.handleRedirect(); }catch(e){}
+    refreshEntitlement();
+  }
+
+  // ---- sign-in handlers ----
+  $('buyPro').addEventListener('click', function(e){
+    if(!(window.OG_CONFIG && OG_CONFIG.PRO_CHECKOUT_URL)){ e.preventDefault(); showProErr('Checkout is not live yet — hold tight.'); }
   });
-  $('activate').addEventListener('click', function(){
-    var key = ($('licenseKey').value||'').trim();
-    var e = $('proErr'); e.style.display='none';
-    if(!key){ e.textContent='Paste your license key first.'; e.style.display='block'; return; }
-    $('activate').disabled = true; $('activate').textContent = 'Checking…';
-    validateLicense(key).then(function(ok){
-      $('activate').disabled = false; $('activate').textContent = 'Activate';
-      if(ok){ setPro(true); }
-      else { e.textContent = "That key didn't validate. Check it, or grab one from “Get Pro”."; e.style.display='block'; }
+  $('haveAccount').addEventListener('click', function(){
+    var b=$('signinBox'); b.style.display = (b.style.display==='none' ? 'block' : 'none'); showProErr('');
+  });
+  $('sendLink').addEventListener('click', function(){
+    showProErr('');
+    var email = ($('email').value||'').trim();
+    if(!/.+@.+\..+/.test(email)){ showProErr('Enter a valid email address.'); return; }
+    var btn=$('sendLink'); btn.disabled=true; btn.textContent='Sending…';
+    OGAuth.sendLink(email).then(function(){
+      btn.disabled=false; btn.textContent='Email me a sign-in link';
+      $('codeBox').style.display='flex';
+      showProNote('Check your email — click the sign-in link, or paste the 6-digit code below.');
+    }).catch(function(err){
+      btn.disabled=false; btn.textContent='Email me a sign-in link';
+      showProErr((err && err.message) || 'Could not send the sign-in email.');
     });
   });
-  $('deactivate').addEventListener('click', function(){ setPro(false); });
-
-  // Owner preview before Lemon Squeezy is wired up: append ?preview to the URL. (Preview only —
-  // real customers unlock via a license key above.)
-  if(/[?&]preview\b/.test(location.search)){ try{ localStorage.setItem('og-pro','active'); }catch(e){} console.warn('OverfitGuard: Pro DEV PREVIEW enabled via ?preview'); }
+  $('verifyCode').addEventListener('click', function(){
+    showProErr('');
+    var email = ($('email').value||'').trim();
+    var code = ($('otpCode').value||'').trim();
+    if(!code){ showProErr('Paste the 6-digit code from the email.'); return; }
+    var btn=$('verifyCode'); btn.disabled=true; btn.textContent='Verifying…';
+    OGAuth.verifyCode(email, code).then(function(){
+      btn.disabled=false; btn.textContent='Verify code';
+      $('signinBox').style.display='none'; showProNote('');
+      return refreshEntitlement();
+    }).then(function(){
+      if(!isPro()){ showProNote('Signed in — this account is on the free plan. Upgrade to unlock Pro.'); }
+    }).catch(function(err){
+      btn.disabled=false; btn.textContent='Verify code';
+      showProErr((err && err.message) || 'That code did not verify.');
+    });
+  });
+  function doSignOut(){
+    if(!window.OGAuth){ ENT={pro:false,plan:'free',status:null,email:null}; paintPro(); return; }
+    OGAuth.signOut().then(function(){ ENT={pro:false,plan:'free',status:null,email:null}; showProNote(''); paintPro(); });
+  }
+  $('signOutFree').addEventListener('click', doSignOut);
+  $('deactivate').addEventListener('click', doSignOut);
 
   // ---- screener (Pro) ----
   function parseCandidates(text){
@@ -603,7 +680,7 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
   }
   $('clearHist').addEventListener('click', function(){ try{ localStorage.removeItem('og-history'); }catch(e){} renderHistory(); });
 
-  paintPro();
+  bootstrapPro();
 })();
 </script>
 </body>

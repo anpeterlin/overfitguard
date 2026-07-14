@@ -5,7 +5,7 @@ server-verified entitlement. **No runtime dependencies** — Node built-ins only
 serverless functions under `/api`, backed by Supabase (Postgres + Auth) and Lemon Squeezy (payments).
 
 > Status: the code and full local test suite are complete and green. It goes **live** the moment the
-> four Tier-0 secrets are set (see below) — no code changes needed.
+> Tier-0 env vars are set (see below) — no code changes needed.
 
 ## Endpoints (`/api`)
 
@@ -18,8 +18,10 @@ serverless functions under `/api`, backed by Supabase (Postgres + Auth) and Lemo
 ## How Pro is enforced (replaces the bypassable flag)
 
 1. User signs in with Supabase (email magic-link) → the browser holds a Supabase **access token (JWT)**.
-2. On load, the web app calls `GET /api/entitlement` with that token. The server verifies the JWT
-   (HS256, `SUPABASE_JWT_SECRET`) and looks up the user's row in the `entitlements` table.
+2. On load, the web app calls `GET /api/entitlement` with that token. The server verifies the JWT's
+   signature against the project's **public JWKS** (`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`;
+   Supabase's current default is asymmetric ES256) and looks up the user's row in the `entitlements`
+   table. The backend holds only a public key — nothing that could mint a token.
 3. Pro is granted **only** if the server says so — a devtools/localStorage edit can't fake it, because
    the entitlement lives server-side and the token is cryptographically verified.
 4. Lemon Squeezy calls `POST /api/webhook` on subscribe/cancel/expire; we verify its signature and
@@ -44,8 +46,8 @@ alter table entitlements enable row level security;   -- service-role key (serve
 2. Create the Lemon Squeezy store + a "Pro" subscription product; add a webhook to
    `https://YOUR-DOMAIN/api/webhook` for subscription + order events; copy the signing secret.
 3. In Vercel: import the repo (zero-config — static site + `/api` functions are auto-detected) and set
-   the four env vars from `.env.example` (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `SUPABASE_JWT_SECRET`,
-   `LEMONSQUEEZY_WEBHOOK_SECRET`).
+   the env vars from `.env.example` (`SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
+   `LEMONSQUEEZY_WEBHOOK_SECRET`). No JWT secret — tokens are verified against the public JWKS.
 4. Point the domain at Vercel.
 
 That's it — the endpoints activate with the env present; no code change.
@@ -69,5 +71,7 @@ falls back to in-memory (non-persistent) so you can run the functions locally.
   Supabase anon key + its own user access token.
 - **Provider-agnostic store:** `store.mjs` is an interface (`get`/`set`) with `MemoryStore` and
   `SupabaseStore`; swapping Postgres/Neon/Stripe later is a small, isolated change.
-- The web app wiring (sign-in UI + calling `/api/entitlement`, removing the old client-side flag) is the
-  next step and depends on the deployed backend URL + Supabase project.
+- **Web app wiring is done** (`web/auth.js` + `web/config.js`): the browser signs in with Supabase
+  (email link / 6-digit code) and gates Pro on `GET /api/entitlement`, replacing the old client-side
+  flag. It activates when `web/config.js` is filled in — see `web/AUTH_SETUP.md`. Until then the app
+  runs in "accounts launching soon" mode (free audit works; Pro locked).

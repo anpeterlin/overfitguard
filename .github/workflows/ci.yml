@@ -48,6 +48,8 @@ jobs:
           node-version: "20"
       - name: Zero-variance guard sweep (validate + screen)
         run: node web/_parity/check_degenerate.js
+      - name: Auth/entitlement helper tests
+        run: node --test web/_parity/check_auth.mjs
 
   backend:
     name: backend tests (node --test)
