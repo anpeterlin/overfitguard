@@ -6,6 +6,13 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.1] — 2026-07-13
+
+### Added
+- The **K-fold cross-validation** section now renders in the HTML report (`html_report(result, kfold=...)`),
+  the CLI (`validate ... --kfold K --html out.html` embeds it), and the browser web app (shown in the
+  result panel and included in the downloaded report) — surfacing the 0.3.0 engine feature on every UI.
+
 ## [0.3.0] — 2026-07-13
 
 ### Added

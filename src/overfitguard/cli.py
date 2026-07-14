@@ -48,11 +48,13 @@ def _one_series(df: pd.DataFrame, column: str | None) -> pd.Series:
     return df.iloc[:, 0].dropna()
 
 
-def _emit(result, html_path: str | None) -> None:
+def _emit(result, html_path: str | None, kfold=None) -> None:
     print(result.report())
+    if kfold is not None:
+        print("\n" + kfold.report())
     if html_path:
         with open(html_path, "w", encoding="utf-8") as fh:
-            fh.write(html_report(result))
+            fh.write(html_report(result, kfold=kfold))
         print(f"\nHTML report written to {html_path}")
 
 
@@ -87,10 +89,9 @@ def main(argv: list[str] | None = None) -> int:
         bench = _one_series(_read_csv(args.benchmark), None) if args.benchmark else None
         result = validate(returns, n_trials=args.trials, holdout_frac=args.holdout,
                           benchmark=bench, periods_per_year=args.periods)
-        _emit(result, args.html)
-        if args.kfold:
-            print("\n" + kfold_oos_sharpe(returns, k=args.kfold, embargo=args.embargo,
-                                          periods_per_year=args.periods).report())
+        kfold = (kfold_oos_sharpe(returns, k=args.kfold, embargo=args.embargo,
+                                  periods_per_year=args.periods) if args.kfold else None)
+        _emit(result, args.html, kfold=kfold)
     else:
         candidates = _read_csv(args.csv).select_dtypes("number")
         result = screen(candidates, n_bootstrap=args.bootstrap, block=args.block,
