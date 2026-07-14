@@ -6,6 +6,14 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+### Added
+- **Backend scaffolding** (`/api`, Vercel serverless) for real, server-verified Pro entitlement
+  replacing the bypassable client-side flag: a Lemon Squeezy webhook (raw-body HMAC-verified), a
+  Supabase-backed entitlement store (`MemoryStore` fallback for local dev), and a Supabase-JWT-gated
+  `/api/entitlement` endpoint. No runtime dependencies; full local test suite
+  (`node --test api/_lib/backend.test.mjs`) plus a CI job. Activates on setting the Tier-0 env vars
+  (see `BACKEND.md` / `.env.example`) — no code change needed. Not shipped in the pip package.
+
 ## [0.3.1] — 2026-07-13
 
 ### Added
