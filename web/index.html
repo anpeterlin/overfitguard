@@ -402,8 +402,11 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
       ".plain{margin:18px 0 22px}table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}"+
       "td{padding:9px 4px;border-bottom:1px solid #eaeef2;font-size:14px}td.n{text-align:right;font-weight:600}"+
       ".foot{margin-top:20px;color:#8b949e;font-size:12px}@media(prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}"+
-      ".card{background:#161b22;border-color:#30363d}.sub,.foot{color:#8b949e}td{border-color:#21262d}}</style></head><body><div class='wrap'><div class='card'>"+
-      "<h1>OverfitGuard</h1><p class='sub'>Strategy reality check</p>"+
+      ".card{background:#161b22;border-color:#30363d}.sub,.foot{color:#8b949e}td{border-color:#21262d}}"+
+      ".brand{display:flex;align-items:center;gap:9px;margin:0 0 2px}.brand svg{width:22px;height:22px;flex:none}.brand h1{margin:0}"+
+      ".pbtn{margin-top:18px;font:600 13px ui-monospace,monospace;padding:8px 14px;border-radius:8px;border:1px solid #d0d7de;background:#f6f8fa;color:#1f2328;cursor:pointer}"+
+      "@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}.card{border:none;padding:6px 2px}.pbtn{display:none}.vd{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body><div class='wrap'><div class='card'>"+
+      "<div class='brand'><svg viewBox='0 0 32 32' aria-hidden='true'><rect x='4' y='4' width='24' height='24' rx='6' fill='#e2a13c'/><path d='M8 21 L15 11 L19 17 L24 9' fill='none' stroke='#120d05' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg><h1>OverfitGuard</h1></div><p class='sub'>Strategy reality check</p>"+
       "<span class='vd' style='background:"+color+"'>"+res.verdict+"</span>"+
       "<p class='plain'>"+v.blurb+"</p><table>"+
       row('Deflated Sharpe (P edge is real)', fmt(res.deflatedSharpe*100,1)+'%')+
@@ -418,7 +421,8 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
         return "<h2 style='font-size:14px;color:#57606a;margin:22px 0 8px'>K-fold out-of-sample cross-validation ("+kf.k+" folds)</h2>"+chips+
           "<p style='color:#57606a;font-size:13px;margin:10px 0 0'>mean "+fmt(kf.meanSharpe)+" · min "+fmt(kf.minSharpe)+" · positive in "+Math.round(kf.fracFoldsPositive*100)+"% of folds — "+(kf.consistent?'CONSISTENT':'NOT consistent')+"</p>";
       })()+"<p class='foot'>"+res.nPeriods+" periods · "+Math.round(res.holdoutFrac*100)+"% sealed as holdout · "+
-      "Deflated Sharpe (Bailey &amp; López de Prado) + sealed out-of-sample holdout · generated locally by OverfitGuard.</p></div></div></body></html>";
+      "Deflated Sharpe (Bailey &amp; López de Prado) + sealed out-of-sample holdout · generated locally by OverfitGuard.</p>"+
+      "<button class='pbtn' onclick='window.print()'>Print / Save as PDF</button></div></div></body></html>";
   }
   function download(){
     if(!lastResult) return;

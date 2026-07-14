@@ -14,6 +14,14 @@ All notable changes to this project are documented here. The format is based on
   (`node --test api/_lib/backend.test.mjs`) plus a CI job. Activates on setting the Tier-0 env vars
   (see `BACKEND.md` / `.env.example`) — no code change needed. Not shipped in the pip package.
 
+## [0.3.2] — 2026-07-13
+
+### Added
+- **Branded, print-optimized HTML reports.** `html_report(...)` now includes the OverfitGuard logo/
+  wordmark header and a print stylesheet so reports export cleanly to PDF (browser → Print → Save as
+  PDF), with color-accurate verdict/fold chips. The web app's downloaded report is branded too and adds
+  a "Print / Save as PDF" button. Bundled example reports regenerated to showcase branding + K-fold.
+
 ## [0.3.1] — 2026-07-13
 
 ### Added

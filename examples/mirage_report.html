@@ -12,7 +12,19 @@ table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
 td,th{text-align:left;padding:9px 4px;border-bottom:1px solid #eaeef2;font-size:14px}
 th{color:#57606a;font-weight:600}td.n{text-align:right;font-weight:600}
 .foot{margin-top:22px;color:#8b949e;font-size:12px}
+.kfold{margin-top:22px;border-top:1px solid #eaeef2;padding-top:16px}
+.kfold h2{font-size:14px;color:#57606a;font-weight:600;margin:0 0 10px}
+.folds{display:flex;flex-wrap:wrap;gap:6px}
+.fold{font-variant-numeric:tabular-nums;font-size:13px;font-weight:600;padding:4px 9px;border-radius:6px;color:#fff}
+.fold.pos{background:#1a7f37}.fold.neg{background:#cf222e}
+.kf-sum{color:#57606a;font-size:13px;margin:10px 0 4px}
+.kf-verdict{font-size:14px;font-weight:600;margin:0}
+.brand{display:flex;align-items:center;gap:9px;margin:0 0 2px}
+.brand svg{width:22px;height:22px;display:block;flex:none}.brand h1{margin:0}
 @media(prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}
- .card{background:#161b22;border-color:#30363d}.sub,th,.foot{color:#8b949e}
- td,th{border-color:#21262d}}
-</style></head><body><div class='wrap'><div class='card'><h1>OverfitGuard</h1><p class='sub'>Single-strategy reality check</p><span class='verdict' style='background:#cf222e'>FAILS_OUT_OF_SAMPLE</span><p class='plain'>The edge vanishes (or reverses) on data the search never touched. This is the classic data-mined mirage — do not trade it.</p><table><tr><td>Deflated Sharpe (P edge is real)</td><td class="n">82.7%</td></tr><tr><td>Trials you tried</td><td class="n">500</td></tr><tr><td>Full-sample Sharpe</td><td class="n">1.25</td></tr><tr><td>In-sample Sharpe</td><td class="n">2.29</td></tr><tr><td>Out-of-sample Sharpe</td><td class="n">-0.68</td></tr><tr><td>Out-of-sample retention</td><td class="n">-29.7%</td></tr></table><p class='foot'>2,600 periods · 35% sealed as holdout · Deflated Sharpe (Bailey &amp; López de Prado) + sealed out-of-sample holdout.</p></div></div></body></html>
+ .card{background:#161b22;border-color:#30363d}.sub,th,.foot,.kfold h2,.kf-sum{color:#8b949e}
+ td,th,.kfold{border-color:#21262d}}
+@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .wrap{margin:0;max-width:none;padding:0}.card{border:none;box-shadow:none;border-radius:0;padding:6px 2px}
+ .verdict,.fold{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+</style></head><body><div class='wrap'><div class='card'><div class='brand'><svg viewBox='0 0 32 32' aria-hidden='true'><rect x='4' y='4' width='24' height='24' rx='6' fill='#e2a13c'/><path d='M8 21 L15 11 L19 17 L24 9' fill='none' stroke='#120d05' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg><h1>OverfitGuard</h1></div><p class='sub'>Single-strategy reality check</p><span class='verdict' style='background:#cf222e'>FAILS_OUT_OF_SAMPLE</span><p class='plain'>The edge vanishes (or reverses) on data the search never touched. This is the classic data-mined mirage — do not trade it.</p><table><tr><td>Deflated Sharpe (P edge is real)</td><td class="n">82.7%</td></tr><tr><td>Trials you tried</td><td class="n">500</td></tr><tr><td>Full-sample Sharpe</td><td class="n">1.25</td></tr><tr><td>In-sample Sharpe</td><td class="n">2.29</td></tr><tr><td>Out-of-sample Sharpe</td><td class="n">-0.68</td></tr><tr><td>Out-of-sample retention</td><td class="n">-29.7%</td></tr></table><div class='kfold'><h2>K-fold out-of-sample cross-validation (5 folds)</h2><div class='folds'><span class="fold pos">1.69</span><span class="fold pos">2.12</span><span class="fold pos">3.33</span><span class="fold pos">0.62</span><span class="fold neg">-1.52</span></div><p class='kf-sum'>mean 1.25 · min -1.52 · positive in 80% of folds</p><p class='kf-verdict' style='color:#cf222e'>NOT consistent — the edge is absent or negative in at least one sub-period.</p></div><p class='foot'>2,600 periods · 35% sealed as holdout · Deflated Sharpe (Bailey &amp; López de Prado) + sealed out-of-sample holdout.</p></div></div></body></html>
