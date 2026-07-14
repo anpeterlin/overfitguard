@@ -9,10 +9,10 @@
 // fully functional and Pro stays locked (the owner can still preview Pro features with ?preview).
 window.OG_CONFIG = {
   // Supabase project URL, e.g. "https://abcdefgh.supabase.co". Leave "" until provisioned.
-  SUPABASE_URL: "",
+  SUPABASE_URL: "https://gzipqmydqyfeqbmreeng.supabase.co",
 
   // Supabase publishable key ("sb_publishable_…", or a legacy "anon" key). Public — safe to ship.
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_ANON_KEY: "sb_publishable_zvyDLySCwyoPFhEbhMe-Fg_-ObX5jgu",
 
   // Base URL for the /api backend. "" = same origin, which is correct for the deployed site
   // (the functions live at /api on the same host). Override only for local dev against a
