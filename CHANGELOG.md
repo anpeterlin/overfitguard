@@ -14,6 +14,12 @@ All notable changes to this project are documented here. The format is based on
   (see `web/AUTH_SETUP.md`), and until then runs in "accounts launching soon" mode (free audit fully
   functional, Pro locked; owner `?preview` unlock is tab-only and never persisted). Covered by a
   headless-browser smoke test and unit tests (`web/_parity/check_auth.mjs`, wired into CI).
+- **Asymmetric (JWKS) access-token verification.** `/api/entitlement` now verifies the Supabase
+  access token's signature against the project's public JWKS
+  (`${SUPABASE_URL}/auth/v1/.well-known/jwks.json`; ES256/RS256), matching Supabase's current default
+  and removing the need for a shared `SUPABASE_JWT_SECRET` — the backend holds only a public key. The
+  JWKS is fetched and cached (with rotation-aware refetch); symmetric `alg` and `alg:"none"` are
+  rejected. Uses the new publishable/secret API keys (legacy `anon`/`service_role` still work).
 - **Backend scaffolding** (`/api`, Vercel serverless) for real, server-verified Pro entitlement
   replacing the bypassable client-side flag: a Lemon Squeezy webhook (raw-body HMAC-verified), a
   Supabase-backed entitlement store (`MemoryStore` fallback for local dev), and a Supabase-JWT-gated

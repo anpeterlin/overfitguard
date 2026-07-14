@@ -11,7 +11,7 @@ window.OG_CONFIG = {
   // Supabase project URL, e.g. "https://abcdefgh.supabase.co". Leave "" until provisioned.
   SUPABASE_URL: "",
 
-  // Supabase "anon" public key (a long, JWT-looking string). Public by design — safe to ship.
+  // Supabase publishable key ("sb_publishable_…", or a legacy "anon" key). Public — safe to ship.
   SUPABASE_ANON_KEY: "",
 
   // Base URL for the /api backend. "" = same origin, which is correct for the deployed site

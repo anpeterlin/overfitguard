@@ -1,7 +1,7 @@
 // GET /api/entitlement — returns the caller's Pro status.
 // Auth: the browser sends its Supabase access token as `Authorization: Bearer <jwt>`.
 // This is the server-side gate that REPLACES the old bypassable client-side Pro flag.
-import { verifySupabaseJwt } from './_lib/auth.mjs';
+import { jwksUrlFor, verifySupabaseJwt } from './_lib/auth.mjs';
 import { storeFromEnv } from './_lib/store.mjs';
 
 /**
@@ -12,8 +12,8 @@ export default async function handler(req, res, deps = {}) {
   const authHeader = req.headers['authorization'] || req.headers['Authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
 
-  const verify = deps.verify || ((t) => verifySupabaseJwt(t, env.SUPABASE_JWT_SECRET));
-  const payload = verify(token);
+  const verify = deps.verify || ((t) => verifySupabaseJwt(t, { jwksUrl: jwksUrlFor(env.SUPABASE_URL) }));
+  const payload = await verify(token);
   if (!payload || !payload.email) return res.status(401).json({ error: 'unauthenticated' });
 
   const store = deps.store || storeFromEnv(env);
