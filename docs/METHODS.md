@@ -58,6 +58,18 @@ chronologically (default: last 35% sealed as holdout, each side clamped to ≥30
 in-sample vs out-of-sample Sharpe and the retention ratio. The caller is responsible for having chosen
 the strategy on the training portion only.
 
+## K-fold cross-validation of the out-of-sample Sharpe
+
+Because a single tail holdout is noisy, `kfold_oos_sharpe(returns, k=5, embargo=0)` splits the series
+into `k` **contiguous** folds and reports the annualised Sharpe of each, plus `mean` / `min` / `std`,
+the fraction of folds that are positive, and a strict `consistent` flag (**every** fold positive). A
+genuine edge is positive across *all* sub-periods; a front-loaded mirage shows the decay (a late fold
+near zero or negative) that a single holdout can miss. An optional `embargo` trims that many periods
+from each end of every fold to blunt autocorrelation bleed at the boundaries — the returns-series
+analogue of purging in López de Prado's purged K-fold. This is an **adaptation**, not model-CV: there
+is no model training here, so "purging" reduces to the boundary embargo. Available on the CLI as
+`validate ... --kfold K [--embargo E]`, and the JavaScript engine mirrors it to floating-point parity.
+
 ## The verdict ladder
 
 Tested in this order (so a mirage that dies out-of-sample is caught first):
@@ -103,7 +115,9 @@ Monte-Carlo over 20,000 pure-noise (zero-edge) series, $n=2000$:
   pass `n_trials=1`, the holdout is the only backstop, and it catches only ~half of such mirages — the
   residual `LIKELY_REAL` rate is well above the nominal 5%. Be honest with `n_trials`.
 - **The multiplicity proxy** (above) can over-penalize correlated searches; use `screen()` there.
-- **A single 35% holdout is noisy.** Purged K-fold cross-validation is on the roadmap.
+- **A single 35% holdout is noisy** — a genuine edge can miss it and a mirage can fluke it. Use
+  `kfold_oos_sharpe(...)` (or `validate ... --kfold K`) to cross-validate across `K` contiguous
+  sub-periods and see whether the edge is *consistent across time* (see below).
 - **`screen()` tests mean-vs-zero**, not vs a benchmark.
 - OverfitGuard is **research/due-diligence tooling, not financial advice.** `LIKELY_REAL` means "you
   have earned the right to believe it," not "trade this."

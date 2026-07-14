@@ -14,7 +14,7 @@ import sys
 
 import pandas as pd
 
-from overfitguard.core import validate
+from overfitguard.core import kfold_oos_sharpe, validate
 from overfitguard.report import html_report
 from overfitguard.screen import screen
 
@@ -68,6 +68,9 @@ def main(argv: list[str] | None = None) -> int:
     v.add_argument("--benchmark", default=None, help="CSV of benchmark returns (e.g. buy-and-hold)")
     v.add_argument("--holdout", type=float, default=0.35, help="tail fraction sealed as out-of-sample")
     v.add_argument("--periods", type=int, default=252, help="periods per year (252 daily, 12 monthly)")
+    v.add_argument("--kfold", type=int, default=0,
+                   help="also run K-fold out-of-sample cross-validation with this many folds (0 = off)")
+    v.add_argument("--embargo", type=int, default=0, help="periods trimmed from each fold end in --kfold")
     v.add_argument("--html", default=None, help="also write a self-contained HTML report here")
 
     s = sub.add_parser("screen", help="judge a WHOLE search (White's Reality Check)")
@@ -85,6 +88,9 @@ def main(argv: list[str] | None = None) -> int:
         result = validate(returns, n_trials=args.trials, holdout_frac=args.holdout,
                           benchmark=bench, periods_per_year=args.periods)
         _emit(result, args.html)
+        if args.kfold:
+            print("\n" + kfold_oos_sharpe(returns, k=args.kfold, embargo=args.embargo,
+                                          periods_per_year=args.periods).report())
     else:
         candidates = _read_csv(args.csv).select_dtypes("number")
         result = screen(candidates, n_bootstrap=args.bootstrap, block=args.block,

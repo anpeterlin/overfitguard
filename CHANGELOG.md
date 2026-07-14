@@ -6,6 +6,16 @@ All notable changes to this project are documented here. The format is based on
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-13
+
+### Added
+- **K-fold cross-validation of the out-of-sample Sharpe** — `kfold_oos_sharpe(returns, k=5, embargo=0)`
+  (exported at the top level) and a `KFoldResult` with per-fold Sharpes, `mean`/`min`/`std`, the fraction
+  of positive folds, and a strict `consistent` flag (every fold positive). A single tail holdout is
+  noisy; this shows whether an edge holds *across time* rather than in one lucky window. Exposed on the
+  CLI as `overfitguard validate ... --kfold K [--embargo E]`, mirrored in the browser engine
+  (`OverfitGuard.kfoldOosSharpe`) to floating-point parity, and documented in `docs/METHODS.md`.
+
 ## [0.2.1] — 2026-07-13
 
 ### Fixed

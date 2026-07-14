@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "overfitguard"
-version = "0.2.1"
+version = "0.3.0"
 description = "An honest reality-check for trading strategies — Deflated Sharpe Ratio + sealed out-of-sample holdout."
 readme = "README.md"
 requires-python = ">=3.9"

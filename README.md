@@ -98,8 +98,9 @@ with formulas and calibration evidence, is in **[docs/METHODS.md](docs/METHODS.m
   answers "does the best of these have positive expected return beyond luck?" — not "does it beat
   buy-and-hold." Bring your own benchmark by screening excess-over-benchmark returns.
 - **Approximations, stated plainly:** the deflation's multiplicity bar uses the strategy's own Sharpe
-  estimator variance as a proxy for the dispersion of your trial Sharpes; and the out-of-sample check
-  is a *single* 35% holdout, which is itself noisy (purged K-fold cross-validation is on the roadmap).
+  estimator variance as a proxy for the dispersion of your trial Sharpes; and the default out-of-sample
+  check is a *single* 35% holdout, which is itself noisy — for a more robust read, cross-validate across
+  sub-periods with `kfold_oos_sharpe(returns, k=5)` or `overfitguard validate ... --kfold 5`.
 - It is a **research / due-diligence tool, not financial advice.** `LIKELY_REAL` means "you have earned
   the right to believe it," not "trade this."
 
