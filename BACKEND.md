@@ -69,5 +69,7 @@ falls back to in-memory (non-persistent) so you can run the functions locally.
   Supabase anon key + its own user access token.
 - **Provider-agnostic store:** `store.mjs` is an interface (`get`/`set`) with `MemoryStore` and
   `SupabaseStore`; swapping Postgres/Neon/Stripe later is a small, isolated change.
-- The web app wiring (sign-in UI + calling `/api/entitlement`, removing the old client-side flag) is the
-  next step and depends on the deployed backend URL + Supabase project.
+- **Web app wiring is done** (`web/auth.js` + `web/config.js`): the browser signs in with Supabase
+  (email link / 6-digit code) and gates Pro on `GET /api/entitlement`, replacing the old client-side
+  flag. It activates when `web/config.js` is filled in — see `web/AUTH_SETUP.md`. Until then the app
+  runs in "accounts launching soon" mode (free audit works; Pro locked).

@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The format is based on
 ## [Unreleased]
 
 ### Added
+- **Web app accounts + server-verified Pro.** The browser app now signs in with Supabase (email
+  magic-link or 6-digit code) and gates Pro on `GET /api/entitlement`, replacing the bypassable
+  client-side flag — a devtools/localStorage edit can no longer fake Pro. New dependency-free client
+  (`web/auth.js`, GoTrue REST) and public config (`web/config.js`); activates when config is filled in
+  (see `web/AUTH_SETUP.md`), and until then runs in "accounts launching soon" mode (free audit fully
+  functional, Pro locked; owner `?preview` unlock is tab-only and never persisted). Covered by a
+  headless-browser smoke test and unit tests (`web/_parity/check_auth.mjs`, wired into CI).
 - **Backend scaffolding** (`/api`, Vercel serverless) for real, server-verified Pro entitlement
   replacing the bypassable client-side flag: a Lemon Squeezy webhook (raw-body HMAC-verified), a
   Supabase-backed entitlement store (`MemoryStore` fallback for local dev), and a Supabase-JWT-gated
