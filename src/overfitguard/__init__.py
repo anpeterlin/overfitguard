@@ -21,9 +21,11 @@ crypto, options — anything) and never sees your data source, your broker, or y
 from __future__ import annotations
 
 from overfitguard.core import (
+    KFoldResult,
     ValidationResult,
     annualized_sharpe,
     deflated_sharpe_ratio,
+    kfold_oos_sharpe,
     probabilistic_sharpe_ratio,
     validate,
 )
@@ -35,9 +37,11 @@ __all__ = [
     "ValidationResult",
     "screen",
     "ScreenResult",
+    "kfold_oos_sharpe",
+    "KFoldResult",
     "html_report",
     "annualized_sharpe",
     "deflated_sharpe_ratio",
     "probabilistic_sharpe_ratio",
 ]
-__version__ = "0.2.1"
+__version__ = "0.3.0"

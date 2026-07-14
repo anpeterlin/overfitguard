@@ -327,9 +327,37 @@
     };
   }
 
+  // ---- K-fold cross-validation of the out-of-sample Sharpe (core.py: kfold_oos_sharpe) ----
+  // Splits the series into k contiguous folds and scores each; a real edge is positive in EVERY fold,
+  // a front-loaded mirage is not. Fold boundaries match numpy's linspace(0,n,k+1).astype(int) (trunc).
+  function kfoldOosSharpe(returns, k, opts) {
+    opts = opts || {};
+    var embargo = Math.max(Math.trunc(opts.embargo == null ? 0 : opts.embargo), 0);
+    var ppy = opts.periodsPerYear == null ? TRADING_DAYS : opts.periodsPerYear;
+    k = Math.max(Math.trunc(k == null ? 5 : k), 2);
+    var r = clean(returns), n = r.length, i;
+    if (n < k * (2 * embargo + 2)) {
+      return { k: k, embargo: embargo, foldSharpes: [], meanSharpe: 0, minSharpe: 0, stdSharpe: 0,
+        fracFoldsPositive: 0, consistent: false, nPeriods: n };
+    }
+    var sharpes = [];
+    for (i = 0; i < k; i++) {
+      var lo = Math.trunc(n * i / k), hi = Math.trunc(n * (i + 1) / k);
+      sharpes.push(annualizedSharpe(r.slice(lo + embargo, hi - embargo), ppy));
+    }
+    var sum = 0, mn = Infinity, pos = 0;
+    for (i = 0; i < k; i++) { sum += sharpes[i]; if (sharpes[i] < mn) mn = sharpes[i]; if (sharpes[i] > 0) pos++; }
+    var mean = sum / k, v = 0;
+    for (i = 0; i < k; i++) { var d = sharpes[i] - mean; v += d * d; }
+    return { k: k, embargo: embargo, foldSharpes: sharpes, meanSharpe: mean, minSharpe: mn,
+      stdSharpe: k > 1 ? Math.sqrt(v / (k - 1)) : 0, fracFoldsPositive: pos / k,
+      consistent: mn > 0, nPeriods: n };
+  }
+
   var API = {
     validate: validate,
     screen: screen,
+    kfoldOosSharpe: kfoldOosSharpe,
     deflatedSharpeRatio: deflatedSharpeRatio,
     probabilisticSharpeRatio: probabilisticSharpeRatio,
     annualizedSharpe: annualizedSharpe,

@@ -12,6 +12,7 @@ import pandas as pd
 from overfitguard import (
     annualized_sharpe,
     deflated_sharpe_ratio,
+    kfold_oos_sharpe,
     probabilistic_sharpe_ratio,
     validate,
 )
@@ -138,3 +139,36 @@ def test_extreme_trial_count_does_not_crash():
         assert v.verdict in {"LIKELY_OVERFIT", "FAILS_OUT_OF_SAMPLE", "INCONCLUSIVE"}
         assert 0.0 <= v.deflated_sharpe <= 1.0
         assert 0.0 <= deflated_sharpe_ratio(r, n) <= 1.0
+
+
+def test_kfold_consistent_for_persistent_edge():
+    # A genuinely persistent edge is positive in EVERY contiguous sub-period, not just the tail holdout.
+    kr = kfold_oos_sharpe(_series(0, 0.0011, 0.008), k=5)
+    assert len(kr.fold_sharpes) == 5
+    assert kr.frac_folds_positive == 1.0
+    assert kr.consistent and kr.min_sharpe > 0
+
+
+def test_kfold_flags_front_loaded_mirage_as_inconsistent():
+    # Strong early drift, clearly negative tail: at least one fold is negative -> NOT consistent, and the
+    # edge visibly decays across time. This is what a single tail holdout can catch only noisily.
+    rng = np.random.default_rng(3)
+    n, cut = 2600, int(2600 * 0.6)
+    x = np.empty(n)
+    x[:cut] = rng.normal(0.0015, 0.008, cut)
+    x[cut:] = rng.normal(-0.0012, 0.008, n - cut)
+    kr = kfold_oos_sharpe(pd.Series(x), k=5)
+    assert not kr.consistent
+    assert kr.min_sharpe < 0
+    assert kr.frac_folds_positive < 1.0
+    assert kr.fold_sharpes[-1] < kr.fold_sharpes[0]  # decays across time
+
+
+def test_kfold_embargo_and_degenerate_guards():
+    r = _series(1, 0.0008, 0.010, n=1000)
+    assert kfold_oos_sharpe(r, k=1).k == 2                      # k coerced to >= 2
+    assert 0.0 <= kfold_oos_sharpe(r, k=5).frac_folds_positive <= 1.0
+    assert kfold_oos_sharpe(r, k=5, embargo=20).embargo == 20
+    empty = kfold_oos_sharpe(pd.Series(np.zeros(6)), k=5)        # too little data for 5 folds
+    assert empty.fold_sharpes == () and empty.consistent is False
+    assert "cross-validation" in kfold_oos_sharpe(r, k=4).report()

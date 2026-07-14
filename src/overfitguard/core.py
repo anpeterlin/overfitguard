@@ -245,3 +245,83 @@ def validate(
 
     return ValidationResult(verdict, dsr, full_sr, is_sr, oos_sr, retention, int(n_trials), int(r.size),
                             holdout_frac, bench_sr, beats_oos, tuple(notes))
+
+
+# ---------------------------------------------------------------------------
+# K-fold cross-validation of the out-of-sample Sharpe.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class KFoldResult:
+    k: int
+    embargo: int
+    fold_sharpes: tuple[float, ...]      # annualised Sharpe of each contiguous fold
+    mean_sharpe: float
+    min_sharpe: float
+    std_sharpe: float
+    frac_folds_positive: float           # share of folds with Sharpe > 0
+    consistent: bool                     # True iff EVERY fold is positive (min > 0)
+    n_periods: int
+
+    def report(self) -> str:
+        if not self.fold_sharpes:
+            return f"K-fold OOS cross-validation: INSUFFICIENT_DATA (need more periods for {self.k} folds)."
+        folds = ", ".join(f"{s:.2f}" for s in self.fold_sharpes)
+        tail = (f", embargo {self.embargo}" if self.embargo else "")
+        return "\n".join([
+            f"K-fold OOS cross-validation ({self.k} folds{tail}):",
+            f"  per-fold Sharpe: [{folds}]",
+            f"  mean {self.mean_sharpe:.2f} | min {self.min_sharpe:.2f} | std {self.std_sharpe:.2f} "
+            f"| positive in {self.frac_folds_positive * 100:.0f}% of folds",
+            "  " + ("CONSISTENT — the edge is positive in every sub-period."
+                    if self.consistent else
+                    "NOT consistent — the edge is absent or negative in at least one sub-period."),
+        ])
+
+
+def kfold_oos_sharpe(
+    returns: pd.Series | np.ndarray,
+    k: int = 5,
+    *,
+    embargo: int = 0,
+    periods_per_year: int = _TRADING_DAYS,
+) -> KFoldResult:
+    """Cross-validate a strategy's out-of-sample Sharpe across ``k`` contiguous sub-periods.
+
+    A single tail holdout is noisy: a genuine edge can miss it and a mirage can fluke it. This splits
+    the return series into ``k`` contiguous folds and reports the annualised Sharpe of each, so you can
+    see whether the edge is *consistent across time* rather than concentrated in one lucky window. An
+    optional ``embargo`` trims that many periods from each end of every fold to blunt autocorrelation
+    bleed at the boundaries (the returns-series analogue of purging in López de Prado's purged K-fold).
+
+    Args:
+        returns: the strategy's per-period returns, in chronological order.
+        k: number of contiguous folds (coerced to >= 2).
+        embargo: periods trimmed from each end of every fold before it is scored.
+        periods_per_year: annualisation factor (252 daily, 52 weekly, 12 monthly).
+
+    Returns:
+        A KFoldResult with per-fold Sharpes and summary stats (``mean/min/std``,
+        ``frac_folds_positive``, and ``consistent`` = every fold positive), plus ``.report()``.
+        Too little data for ``k`` scorable folds yields an empty result (``consistent`` False).
+    """
+    r = _clean(returns)
+    k = max(int(k), 2)
+    embargo = max(int(embargo), 0)
+    min_per_fold = 2 * embargo + 2  # need at least a couple of scorable points per fold after trimming
+    if r.size < k * min_per_fold:
+        return KFoldResult(k, embargo, (), 0.0, 0.0, 0.0, 0.0, False, int(r.size))
+    bounds = np.linspace(0, r.size, k + 1).astype(int)
+    sharpes: list[float] = []
+    for i in range(k):
+        lo, hi = int(bounds[i]), int(bounds[i + 1])
+        seg = r[lo + embargo: hi - embargo] if embargo else r[lo:hi]
+        sharpes.append(annualized_sharpe(seg, periods_per_year))
+    arr = np.asarray(sharpes, dtype=float)
+    return KFoldResult(
+        k, embargo, tuple(float(s) for s in arr),
+        float(arr.mean()), float(arr.min()),
+        float(arr.std(ddof=1)) if arr.size > 1 else 0.0,
+        float((arr > 0).mean()), bool(arr.min() > 0), int(r.size),
+    )
