@@ -49,10 +49,19 @@ th{color:#57606a;font-weight:600}td.n{text-align:right;font-weight:600}
 .fold.pos{background:#1a7f37}.fold.neg{background:#cf222e}
 .kf-sum{color:#57606a;font-size:13px;margin:10px 0 4px}
 .kf-verdict{font-size:14px;font-weight:600;margin:0}
+.brand{display:flex;align-items:center;gap:9px;margin:0 0 2px}
+.brand svg{width:22px;height:22px;display:block;flex:none}.brand h1{margin:0}
 @media(prefers-color-scheme:dark){body{background:#0d1117;color:#e6edf3}
  .card{background:#161b22;border-color:#30363d}.sub,th,.foot,.kfold h2,.kf-sum{color:#8b949e}
  td,th,.kfold{border-color:#21262d}}
+@media print{body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ .wrap{margin:0;max-width:none;padding:0}.card{border:none;box-shadow:none;border-radius:0;padding:6px 2px}
+ .verdict,.fold{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
 """
+
+_LOGO = ("<svg viewBox='0 0 32 32' aria-hidden='true'><rect x='4' y='4' width='24' height='24' rx='6' "
+         "fill='#e2a13c'/><path d='M8 21 L15 11 L19 17 L24 9' fill='none' stroke='#120d05' "
+         "stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/></svg>")
 
 
 def _row(label: str, value: str, n: bool = True) -> str:
@@ -67,7 +76,8 @@ def _page(title: str, verdict: str, rows: str, foot: str, extra: str = "") -> st
         f"<!doctype html><html><head><meta charset='utf-8'>"
         f"<meta name='viewport' content='width=device-width,initial-scale=1'>"
         f"<title>{html.escape(title)}</title><style>{_CSS}</style></head><body><div class='wrap'>"
-        f"<div class='card'><h1>OverfitGuard</h1><p class='sub'>{html.escape(title)}</p>"
+        f"<div class='card'><div class='brand'>{_LOGO}<h1>OverfitGuard</h1></div>"
+        f"<p class='sub'>{html.escape(title)}</p>"
         f"<span class='verdict' style='background:{color}'>{html.escape(verdict)}</span>"
         f"<p class='plain'>{html.escape(plain)}</p>"
         f"<table>{rows}</table>{extra}<p class='foot'>{html.escape(foot)}</p></div></div></body></html>"

@@ -68,5 +68,6 @@ def test_html_report_embeds_kfold_block_and_stays_self_contained():
     page = html_report(v, kfold=kfold_oos_sharpe(r, k=5))
     assert page.startswith("<!doctype html>")
     assert "cross-validation" in page and "consistent" in page.lower()  # CONSISTENT / NOT consistent
-    assert "http://" not in page and "https://" not in page     # still self-contained
+    assert "class='brand'" in page and "<svg" in page and "@media print" in page  # branded + printable
+    assert "http://" not in page and "https://" not in page     # still self-contained (inline SVG, no xmlns URL)
     assert "cross-validation" not in html_report(v)             # absent when no kfold passed
