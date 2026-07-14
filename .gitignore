@@ -15,5 +15,11 @@ htmlcov/
 !index.html
 .DS_Store
 
+# backend / node
+.env
+.env.local
+node_modules/
+.vercel/
+
 # large generated lab search (regenerate via course/labs/make_data.py)
 course/labs/data/candidates.csv
