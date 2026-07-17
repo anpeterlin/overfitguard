@@ -19,6 +19,6 @@ window.OG_CONFIG = {
   // remote backend, e.g. "https://overfitguard.com".
   API_BASE: "",
 
-  // Lemon Squeezy checkout link for the Pro plan. Leave "" until the store + product exist.
-  PRO_CHECKOUT_URL: "",
+  // Lemon Squeezy checkout link for the Pro plan ($29.99/mo subscription).
+  PRO_CHECKOUT_URL: "https://overfitguard.lemonsqueezy.com/checkout/buy/efffba86-e4eb-497c-9ed4-5c1c019b2310",
 };
