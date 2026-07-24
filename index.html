@@ -392,6 +392,22 @@ a:focus-visible, button:focus-visible{outline:2px solid var(--accent); outline-o
         </a>
       </div>
       <p class="repro">Both regenerate from one command: <code>overfitguard validate returns.csv --trials 500 --html report.html</code></p>
+
+      <div class="calib" style="margin-top:26px; border:1px solid var(--line); border-radius:14px; background:var(--surface); box-shadow:var(--shadow); padding:22px 24px">
+        <p class="eyebrow" style="margin:0 0 6px">The calibration, in one number</p>
+        <p style="margin:0 0 16px; color:var(--muted); max-width:64ch">Manufacture 400 &ldquo;winning&rdquo; backtests out of pure noise &mdash; each the best of 200 random strategies with <em>no real edge</em>. A naive &ldquo;annualized Sharpe&nbsp;&gt;&nbsp;1, ship it&rdquo; rule green-lights all of them. OverfitGuard blesses none.</p>
+        <div style="display:flex; gap:14px; flex-wrap:wrap">
+          <div style="flex:1; min-width:180px; border:1px solid var(--line); border-radius:10px; padding:14px 16px">
+            <div class="mono" style="font-size:30px; font-weight:800; color:var(--mirage); line-height:1">100%</div>
+            <div style="color:var(--muted); font-size:13.5px; margin-top:5px">green-lit by a naive Sharpe rule &mdash; money lost</div>
+          </div>
+          <div style="flex:1; min-width:180px; border:1px solid var(--line); border-radius:10px; padding:14px 16px">
+            <div class="mono" style="font-size:30px; font-weight:800; color:var(--real); line-height:1">0%</div>
+            <div style="color:var(--muted); font-size:13.5px; margin-top:5px">blessed by OverfitGuard &mdash; honest</div>
+          </div>
+        </div>
+        <p class="repro" style="margin-top:16px">Don&rsquo;t take our word for it &mdash; reproduce it: <code>python examples/calibration_stress_test.py</code></p>
+      </div>
     </div>
   </section>
 
