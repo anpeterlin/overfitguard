@@ -228,6 +228,31 @@
       }).catch(function () { return gate(FREE); });
     },
 
+    // Start a Stripe Checkout Session for the signed-in user and resolve to the redirect URL.
+    // Refreshes an expired token first. Rejects with Error('not-signed-in') if there is no session,
+    // so the caller can prompt sign-in; rejects with a message on any backend error.
+    startCheckout: function () {
+      var self = this;
+      var s = this.getSession();
+      if (!s || !s.access_token) return Promise.reject(new Error('not-signed-in'));
+      var base = cfg().API_BASE || "";
+      var pre = isSessionExpired(s, nowSec()) ? this.refresh() : Promise.resolve(s);
+      return pre.then(function (live) {
+        var sess = live || self.getSession();
+        if (!sess || !sess.access_token) throw new Error("not-signed-in");
+        return fetch(base + "/api/checkout", {
+          method: "POST",
+          headers: { Authorization: "Bearer " + sess.access_token, "Content-Type": "application/json", Accept: "application/json" },
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (body) {
+            if (r.status === 401) throw new Error("not-signed-in");
+            if (!r.ok || !body.url) throw new Error((body && body.error) || "Could not start checkout.");
+            return body.url;
+          });
+        });
+      });
+    },
+
     _callEntitlement: function (token) {
       var base = cfg().API_BASE || "";
       return fetch(base + "/api/entitlement", {

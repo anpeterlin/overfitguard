@@ -503,12 +503,34 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
       .catch(function(){ ENT = { pro:false, plan:'free', status:null, email:null }; paintPro(); });
   }
 
-  function bootstrapPro(){
-    var checkout = (window.OG_CONFIG && OG_CONFIG.PRO_CHECKOUT_URL) || '';
-    $('buyPro').setAttribute('href', checkout || '#');
+  // Strip transient checkout/query flags from the address bar without reloading.
+  function cleanCheckoutUrl(){
+    try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
+  }
 
+  // After Stripe redirects back to /web/?checkout=success, the subscription webhook grants Pro
+  // server-side — but it can land a beat after the redirect, so poll the entitlement a few times.
+  function handleCheckoutReturn(){
+    if(/[?&]checkout=cancel\b/.test(location.search)){
+      showProNote('Checkout canceled — no charge was made. The free audit is always available above.');
+      cleanCheckoutUrl(); return true;
+    }
+    if(!/[?&]checkout=success\b/.test(location.search)) return false;
+    showProNote('Payment received — activating your Pro access…');
+    var tries=0;
+    (function poll(){
+      refreshEntitlement().then(function(){
+        if(isPro()){ showProNote('You’re Pro. Thank you! 🎉'); cleanCheckoutUrl(); return; }
+        if(tries++ < 6){ setTimeout(poll, 1500); }
+        else { showProNote('Payment received. If Pro isn’t active in a minute, refresh this page.'); cleanCheckoutUrl(); }
+      });
+    })();
+    return true;
+  }
+
+  function bootstrapPro(){
     // Owner dev preview: ?preview unlocks Pro for THIS TAB only (in-memory, never persisted, never a
-    // customer path) — to demo Pro before Supabase/Lemon Squeezy are wired. Real Pro is server-verified.
+    // customer path) — to demo Pro before checkout is wired. Real Pro is server-verified.
     if(/[?&]preview\b/.test(location.search)){
       ENT = { pro:true, plan:'preview', status:'active', email:null };
       console.warn('OverfitGuard: Pro DEV PREVIEW enabled via ?preview (this tab only)');
@@ -523,13 +545,33 @@ or paste a CSV with a 'returns' column (a date column is fine)"></textarea>
 
     // If we just returned from a magic-link email, capture the session from the URL, then verify.
     try{ OGAuth.handleRedirect(); }catch(e){}
-    refreshEntitlement();
+    // Returning from Stripe checkout runs its own entitlement refresh loop; otherwise refresh once.
+    if(!handleCheckoutReturn()) refreshEntitlement();
   }
 
   // ---- sign-in handlers ----
+  // "Get Pro": Stripe checkout is bound to the signed-in account, so we require sign-in first, then
+  // create a Checkout Session server-side and redirect. (Falls back gracefully if accounts aren't
+  // wired yet, or if the Stripe backend env vars aren't set — the server answers 503.)
   $('buyPro').addEventListener('click', function(e){
+    e.preventDefault();
     try{ window.va && window.va('event', { name: 'get_pro_click' }); }catch(_){}
-    if(!(window.OG_CONFIG && OG_CONFIG.PRO_CHECKOUT_URL)){ e.preventDefault(); showProErr('Checkout is not live yet — hold tight.'); }
+    if(!(window.OGAuth && OGAuth.configured())){ showProErr('Checkout is not live yet — hold tight.'); return; }
+    if(!OGAuth.getSession()){
+      var box=$('signinBox'); if(box){ box.style.display='block'; }
+      showProNote('Sign in with your email first, then click Get Pro — this ties your subscription to your account.');
+      return;
+    }
+    var btn=$('buyPro'); var old=btn.textContent; btn.textContent='Starting checkout…'; btn.style.pointerEvents='none';
+    OGAuth.startCheckout().then(function(url){ window.location.href = url; }).catch(function(err){
+      btn.textContent=old; btn.style.pointerEvents='';
+      if(err && err.message==='not-signed-in'){
+        var b=$('signinBox'); if(b){ b.style.display='block'; }
+        showProNote('Sign in with your email first, then click Get Pro.');
+        return;
+      }
+      showProErr((err && err.message) || 'Could not start checkout.');
+    });
   });
   // Header "Sign in": jump to the Pro card and open the sign-in box (unless already Pro).
   var navSignin = $('navSignin');
