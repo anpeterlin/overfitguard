@@ -121,6 +121,15 @@ test('createCheckoutSession: posts form-encoded to Stripe with auth + email meta
   assert.match(captured.opts.body, /metadata%5Bemail%5D=Buyer%40Fund.com/);
   assert.match(captured.opts.body, /subscription_data%5Bmetadata%5D%5Bemail%5D=Buyer%40Fund.com/);
   assert.match(captured.opts.body, /line_items%5B0%5D%5Bprice%5D=price_1/);
+  // Stripe Tax is OFF unless explicitly requested (unconfigured tax would 400 the session).
+  assert.doesNotMatch(captured.opts.body, /automatic_tax/);
+});
+
+test('createCheckoutSession: automatic tax only included when automaticTax:true', async () => {
+  let body = null;
+  const fakeFetch = async (_u, opts) => { body = opts.body; return { ok: true, json: async () => ({ url: 'u' }) }; };
+  await createCheckoutSession({ secretKey: 's', priceId: 'p', email: 'a@b.com', automaticTax: true, fetchImpl: fakeFetch });
+  assert.match(body, /automatic_tax%5Benabled%5D=true/);
 });
 
 test('createCheckoutSession: surfaces Stripe API errors and validates required args', async () => {

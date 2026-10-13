@@ -42,6 +42,7 @@ export default async function handler(req, res, deps = {}) {
       email: payload.email,
       successUrl: `${base}/web/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
       cancelUrl: `${base}/web/?checkout=cancel`,
+      automaticTax: env.STRIPE_AUTOMATIC_TAX === 'true',
     });
     if (!session || !session.url) return res.status(502).json({ error: 'no checkout url' });
     return res.status(200).json({ url: session.url });

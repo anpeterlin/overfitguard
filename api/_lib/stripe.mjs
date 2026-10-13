@@ -116,7 +116,7 @@ export function encodeStripeForm(obj) {
  * The user's email is stamped onto the session AND the subscription metadata, so every downstream
  * lifecycle webhook carries it back to us — no customer-ID lookup needed to map entitlements.
  * @param {{secretKey:string, priceId:string, email:string, successUrl:string, cancelUrl:string,
- *          fetchImpl?:Function}} args
+ *          automaticTax?:boolean, fetchImpl?:Function}} args
  * @returns {Promise<object>} the created session (includes `id` and `url`).
  */
 export async function createCheckoutSession(args = {}) {
@@ -137,9 +137,11 @@ export async function createCheckoutSession(args = {}) {
     client_reference_id: email,
     metadata: { email },
     subscription_data: { metadata: { email } },
-    // Stripe Tax (enable in the dashboard) computes VAT/sales tax on the session automatically.
-    automatic_tax: { enabled: true },
   };
+  // Stripe Tax is OFF unless explicitly enabled: Stripe rejects session creation when
+  // automatic_tax is on but the account has no tax origin address / registrations configured.
+  // Turn it on (set STRIPE_AUTOMATIC_TAX=true) only after Stripe Tax is set up in the dashboard.
+  if (args.automaticTax) params.automatic_tax = { enabled: true };
 
   const r = await fetchImpl('https://api.stripe.com/v1/checkout/sessions', {
     method: 'POST',
